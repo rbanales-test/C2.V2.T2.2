@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Modulation Matrix Simulator - Topic 2.2</title>
+    <style>
+        /* Coursera Brand Identity */
+        :root {
+            --coursera-blue: #0056D2;
+            --coursera-blue-hover: #00419e;
+            --text-main: #1F1F1F;
+            --text-secondary: #636363;
+            --bg-page: #F5F7F8;
+            --bg-panel: #FFFFFF;
+            --border-color: #E2E2E2;
+            --success-green: #00885A;
+        }
+
+        body {
+            font-family: 'Source Sans Pro', Arial, sans-serif;
+            background-color: var(--bg-page);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            line-height: 1.5;
+        }
+
+        .screen {
+            background-color: var(--bg-panel);
+            padding: 40px;
+            border-radius: 8px;
+            max-width: 850px;
+            width: 100%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+            border: 1px solid var(--border-color);
+            box-sizing: border-box;
+        }
+
+        #app-screen { display: none; }
+
+        h1, h2, h3 { margin-top: 0; color: var(--text-main); }
+        p { color: var(--text-secondary); }
+
+        .tutorial-content {
+            background-color: #EBF3FF;
+            padding: 20px;
+            border-left: 4px solid var(--coursera-blue);
+            margin-bottom: 30px;
+        }
+
+        .matrix-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .routing-block, .performance-block {
+            padding: 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background-color: #FAFAFA;
+            transition: opacity 0.3s;
+        }
+
+        .routing-block.disabled, .performance-block.disabled {
+            opacity: 0.4;
+            pointer-events: none;
+        }
+
+        .block-title {
+            font-weight: bold;
+            color: var(--coursera-blue);
+            margin-bottom: 10px;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 5px;
+        }
+
+        label {
+            display: flex;
+            justify-content: space-between;
+            font-weight: 600;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+
+        select, input[type="range"] { 
+            width: 100%; 
+            margin-bottom: 15px; 
+            padding: 8px;
+            cursor: pointer;
+        }
+
+        button {
+            background-color: var(--coursera-blue);
+            color: #FFFFFF;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        button:hover { background-color: var(--coursera-blue-hover); }
+        button:focus, select:focus, input[type="range"]:focus { outline: 3px solid #82B1FF; outline-offset: 2px; }
+
+        #btn-play {
+            width: 100%;
+            padding: 20px;
+            font-size: 20px;
+            background-color: #000;
+            margin-bottom: 20px;
+        }
+        #btn-play:active { background-color: #333; }
+
+        canvas {
+            background-color: var(--text-main);
+            border-radius: 4px;
+            margin: 20px 0;
+            width: 100%;
+            height: 150px;
+        }
+
+        .mission-box {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #F9F9F9;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+        }
+
+        .mission-title { font-weight: bold; color: var(--coursera-blue); margin-bottom: 10px; }
+        .success-text { color: var(--success-green); font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <!-- Tutorial Screen -->
+    <div id="tutorial-screen" class="screen" role="dialog" aria-labelledby="tutorial-title">
+        <h1 id="tutorial-title">Modulation Matrix Simulator</h1>
+        <div class="tutorial-content">
+            <p><strong>Objective:</strong> Make a static sound move by routing modulation sources (LFO, Velocity, Mod Wheel) to targets (Pitch, Loudness, Filter Cutoff).</p>
+            <p><strong>Instructions:</strong></p>
+            <ol>
+                <li>Click <strong>Start Simulator</strong>.</li>
+                <li>Understand the difference between <em>Audio Flow</em> (the sound) and <em>Control Flow</em> (what moves the settings).</li>
+                <li>Complete the <strong>5 sequential missions</strong> to recreate classic musical effects: Vibrato, Tremolo, Wah, and Dynamic Velocity.</li>
+                <li>Use the virtual keyboard button to trigger the sound.</li>
+            </ol>
+        </div>
+        <button id="btn-start" tabindex="0">Start Simulator</button>
+    </div>
+
+    <!-- Main Screen -->
+    <div id="app-screen" class="screen" role="main" aria-hidden="true">
+        <h2>Control Flow: Making a Sound Move</h2>
+        <p>Connect a source (what moves) to a target (what gets changed).</p>
+        
+        <canvas id="visualizer" width="800" height="150" aria-label="Audio Visualizer" role="img"></canvas>
+        
+        <button id="btn-play" aria-pressed="false" tabindex="0">HOLD VIRTUAL KEY</button>
+
+        <div class="matrix-grid">
+            <!-- Performance Controls (Hands) -->
+            <div id="mod-performance" class="performance-block">
+                <div class="block-title">Performance Controls</div>
+                <label for="midi-velocity">Velocity (How hard): <span id="val-vel">100</span></label>
+                <input type="range" id="midi-velocity" min="1" max="127" value="100">
+                
+                <label for="mod-wheel">Mod Wheel (CC 1): <span id="val-mod">0</span></label>
+                <input type="range" id="mod-wheel" min="0" max="127" value="0">
+                <small style="color:var(--text-secondary);">Simulates player's physical gestures.</small>
+            </div>
+
+            <!-- Routing Matrix -->
+            <div id="mod-matrix-1" class="routing-block disabled">
+                <div class="block-title">Source 1: LFO</div>
+                <small style="color:var(--text-secondary); display:block; margin-bottom:10px;">A slow, steady repeating wave (5 Hz).</small>
+                <label for="route-lfo">Target:</label>
+                <select id="route-lfo">
+                    <option value="none" selected>None (Static)</option>
+                    <option value="pitch">Pitch (Vibrato)</option>
+                    <option value="loudness">Loudness (Tremolo)</option>
+                </select>
+            </div>
+
+            <div id="mod-matrix-2" class="routing-block disabled">
+                <div class="block-title">Sources 2 & 3: MIDI</div>
+                <label for="route-modwheel">Mod Wheel Target:</label>
+                <select id="route-modwheel">
+                    <option value="none" selected>None</option>
+                    <option value="filter">Filter Cutoff (Wah)</option>
+                </select>
+                
+                <label for="route-velocity">Velocity Target:</label>
+                <select id="route-velocity">
+                    <option value="none" selected>None</option>
+                    <option value="dynamics">Loudness & Brightness</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="mission-box" aria-live="polite">
+            <div id="mission-title" class="mission-title">Mission 1/5: The Static Wave</div>
+            <div id="mission-status">Press and hold the virtual key. The sound is a static sawtooth wave. It sounds lifeless.</div>
+        </div>
+    </div>
+
+    <script>
+        const tutorialScreen = document.getElementById('tutorial-screen');
+        const appScreen = document.getElementById('app-screen');
+        const btnStart = document.getElementById('btn-start');
+        const btnPlay = document.getElementById('btn-play');
+        
+        const routeLfo = document.getElementById('route-lfo');
+        const routeMod = document.getElementById('route-modwheel');
+        const routeVel = document.getElementById('route-velocity');
+        
+        const inpVel = document.getElementById('midi-velocity');
+        const inpMod = document.getElementById('mod-wheel');
+        const valVel = document.getElementById('val-vel');
+        const valMod = document.getElementById('val-mod');
+
+        const blockLfo = document.getElementById('mod-matrix-1');
+        const blockMidi = document.getElementById('mod-matrix-2');
+
+        const canvas = document.getElementById('visualizer');
+        const ctx = canvas.getContext('2d');
+        const mTitle = document.getElementById('mission-title');
+        const mStatus = document.getElementById('mission-status');
+
+        let audioCtx, mainOsc, lfoOsc, filter, masterGain;
+        let lfoPitchGain, lfoAmpGain, velocityGain, modWheelGain;
+        let analyser, dataArray, bufferLength;
+        let isPressed = false;
+        let currentMission = 1;
+        let drawVisual;
+
+        btnStart.addEventListener('click', () => {
+            tutorialScreen.style.display = 'none';
+            appScreen.style.display = 'block';
+            initAudio();
+        });
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                
+                // Continuous LFO (5 Hz for classic vibrato/tremolo)
+                lfoOsc = audioCtx.createOscillator();
+                lfoOsc.type = 'sine';
+                lfoOsc.frequency.value = 5;
+                
+                lfoPitchGain = audioCtx.createGain(); // Controls Pitch wobble depth
+                lfoAmpGain = audioCtx.createGain();   // Controls Loudness pulse depth
+                
+                lfoPitchGain.gain.value = 0;
+                lfoAmpGain.gain.value = 0;
+                
+                lfoOsc.connect(lfoPitchGain);
+                lfoOsc.connect(lfoAmpGain);
+                lfoOsc.start();
+
+                // Analyser
+                analyser = audioCtx.createAnalyser();
+                analyser.fftSize = 2048;
+                bufferLength = analyser.frequencyBinCount;
+                dataArray = new Uint8Array(bufferLength);
+                analyser.connect(audioCtx.destination);
+                
+                drawOscilloscope();
+            }
+        }
+
+        function triggerNote() {
+            if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+            isPressed = true;
+            btnPlay.style.backgroundColor = '#0056D2';
+
+            const now = audioCtx.currentTime;
+            
+            // Audio Path: Osc -> Filter -> VelGain -> TremoloGain -> Master -> Analyser
+            mainOsc = audioCtx.createOscillator();
+            mainOsc.type = 'sawtooth';
+            mainOsc.frequency.value = 110; // A2
+            
+            // Connect LFO to Pitch
+            lfoPitchGain.connect(mainOsc.frequency);
+            
+            filter = audioCtx.createBiquadFilter();
+            filter.type = 'lowpass';
+            
+            velocityGain = audioCtx.createGain();
+            let tremoloGain = audioCtx.createGain();
+            masterGain = audioCtx.createGain();
+            
+            // Connect LFO to Amplitude (Tremolo)
+            lfoAmpGain.connect(tremoloGain.gain);
+            
+            mainOsc.connect(filter);
+            filter.connect(velocityGain);
+            velocityGain.connect(tremoloGain);
+            tremoloGain.connect(masterGain);
+            masterGain.connect(analyser);
+            
+            // Apply Routing Logic
+            applyRouting(now);
+
+            // Simple ADSR Envelope for trigger
+            masterGain.gain.setValueAtTime(0, now);
+            masterGain.gain.linearRampToValueAtTime(0.8, now + 0.05); // Attack
+            
+            mainOsc.start();
+            checkMissions();
+        }
+
+        function releaseNote() {
+            if (!audioCtx || !isPressed) return;
+            isPressed = false;
+            btnPlay.style.backgroundColor = '#000';
+
+            const now = audioCtx.currentTime;
+            masterGain.gain.cancelScheduledValues(now);
+            masterGain.gain.setValueAtTime(masterGain.gain.value, now);
+            masterGain.gain.linearRampToValueAtTime(0, now + 0.1); // Release
+            
+            setTimeout(() => {
+                if(mainOsc) {
+                    mainOsc.stop();
+                    mainOsc.disconnect();
+                }
+            }, 150);
+        }
+
+        function applyRouting(time = audioCtx.currentTime) {
+            if(!isPressed) return;
+            
+            const vel = parseInt(inpVel.value);
+            const mod = parseInt(inpMod.value);
+
+            // 1. LFO Routing
+            if (routeLfo.value === 'pitch') {
+                lfoPitchGain.gain.setTargetAtTime(10, time, 0.01); // 10 Hz wobble
+                lfoAmpGain.gain.setTargetAtTime(0, time, 0.01);
+            } else if (routeLfo.value === 'loudness') {
+                lfoPitchGain.gain.setTargetAtTime(0, time, 0.01);
+                lfoAmpGain.gain.setTargetAtTime(0.8, time, 0.01); // Severe pulse
+            } else {
+                lfoPitchGain.gain.setTargetAtTime(0, time, 0.01);
+                lfoAmpGain.gain.setTargetAtTime(0, time, 0.01);
+            }
+
+            // 2. Velocity Routing (Dynamics)
+            if (routeVel.value === 'dynamics') {
+                // Velocity 1-127 maps to Gain (0.1 to 1.0) and Filter Cutoff (200Hz to 8000Hz)
+                const velFactor = vel / 127;
+                velocityGain.gain.setTargetAtTime(velFactor, time, 0.01);
+                filter.frequency.setTargetAtTime(200 + (7800 * velFactor), time, 0.01);
+            } else {
+                velocityGain.gain.setTargetAtTime(1, time, 0.01);
+                filter.frequency.setTargetAtTime(3000, time, 0.01); // Default static bright
+            }
+
+            // 3. Mod Wheel Routing (Wah)
+            if (routeMod.value === 'filter') {
+                // Mod wheel opens filter further (up to 8000 Hz)
+                const modFactor = mod / 127;
+                const baseFreq = routeVel.value === 'dynamics' ? filter.frequency.value : 500; 
+                filter.frequency.setTargetAtTime(baseFreq + (7500 * modFactor), time, 0.05);
+            }
+        }
+
+        function drawOscilloscope() {
+            drawVisual = requestAnimationFrame(drawOscilloscope);
+            analyser.getByteTimeDomainData(dataArray);
+
+            ctx.fillStyle = '#1F1F1F';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = '#82B1FF';
+            ctx.beginPath();
+
+            const sliceWidth = canvas.width * 1.0 / bufferLength;
+            let x = 0;
+
+            for (let i = 0; i < bufferLength; i++) {
+                const v = dataArray[i] / 128.0;
+                const y = v * canvas.height / 2;
+
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+
+                x += sliceWidth;
+            }
+            ctx.lineTo(canvas.width, canvas.height / 2);
+            ctx.stroke();
+        }
+
+        function updateUI() {
+            valVel.textContent = inpVel.value;
+            valMod.textContent = inpMod.value;
+            if(isPressed) applyRouting();
+            checkMissions();
+        }
+
+        function checkMissions() {
+            if (currentMission === 1 && isPressed) {
+                currentMission = 2;
+                blockLfo.classList.remove('disabled');
+                mTitle.textContent = "Mission 2/5: The Singer's Wobble (Vibrato)";
+                mStatus.innerHTML = "Route the <strong>LFO Target</strong> to <strong>Pitch</strong>. Press the key to hear a singer's vibrato.";
+            } 
+            else if (currentMission === 2 && routeLfo.value === 'pitch' && isPressed) {
+                currentMission = 3;
+                mTitle.textContent = "Mission 3/5: The Mandolin's Shimmer (Tremolo)";
+                mStatus.innerHTML = "Route the <strong>LFO Target</strong> to <strong>Loudness</strong>. Press the key to hear a steady pulse in volume.";
+            }
+            else if (currentMission === 3 && routeLfo.value === 'loudness' && isPressed) {
+                currentMission = 4;
+                blockMidi.classList.remove('disabled');
+                mTitle.textContent = "Mission 4/5: The Wah Pedal";
+                mStatus.innerHTML = "Set the LFO back to 'None'. Route <strong>Mod Wheel Target</strong> to <strong>Filter Cutoff</strong>. While holding the key, slide the Mod Wheel.";
+            }
+            else if (currentMission === 4 && routeMod.value === 'filter' && parseInt(inpMod.value) > 50 && isPressed) {
+                currentMission = 5;
+                mTitle.textContent = "Mission 5/5: Human Touch (Velocity)";
+                mStatus.innerHTML = "Route <strong>Velocity Target</strong> to <strong>Loudness & Brightness</strong>. Trigger a note with Velocity at 20, then at 127. Notice how it bites harder!";
+            }
+            else if (currentMission === 5 && routeVel.value === 'dynamics' && parseInt(inpVel.value) > 100 && isPressed) {
+                currentMission = 6;
+                mTitle.textContent = "Mission 5/5: Completed!";
+                mTitle.classList.add('success-text');
+                mStatus.innerHTML = "<strong>Congratulations!</strong> You mapped Control Flow to Audio Flow. <br><br><em>Note: Do not close this window without analyzing how velocity articulation is required for your Week 2 Assignment (Piece 2).</em>";
+            }
+        }
+
+        // Listeners for triggers
+        btnPlay.addEventListener('mousedown', triggerNote);
+        btnPlay.addEventListener('mouseup', releaseNote);
+        btnPlay.addEventListener('mouseleave', releaseNote);
+        btnPlay.addEventListener('touchstart', (e) => { e.preventDefault(); triggerNote(); });
+        btnPlay.addEventListener('touchend', (e) => { e.preventDefault(); releaseNote(); });
+        
+        btnPlay.addEventListener('keydown', (e) => { if ((e.key === 'Enter' || e.key === ' ') && !isPressed) triggerNote(); });
+        btnPlay.addEventListener('keyup', (e) => { if ((e.key === 'Enter' || e.key === ' ') && isPressed) releaseNote(); });
+
+        // Listeners for controls
+        routeLfo.addEventListener('change', updateUI);
+        routeMod.addEventListener('change', updateUI);
+        routeVel.addEventListener('change', updateUI);
+        inpVel.addEventListener('input', updateUI);
+        inpMod.addEventListener('input', updateUI);
+
+        // Initial static draw
+        ctx.fillStyle = '#1F1F1F';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.beginPath();
+        ctx.strokeStyle = '#636363';
+        ctx.moveTo(0, canvas.height/2);
+        ctx.lineTo(canvas.width, canvas.height/2);
+        ctx.stroke();
+    </script>
+</body>
+</html>
