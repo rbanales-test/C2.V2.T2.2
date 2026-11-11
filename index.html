@@ -14,6 +14,11 @@
             --bg-panel: #FFFFFF;
             --border-color: #E2E2E2;
             --success-green: #00885A;
+            --danger-red: #D32F2F;
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
         }
 
         body {
@@ -36,7 +41,6 @@
             width: 100%;
             box-shadow: 0 2px 4px rgba(0,0,0,0.08);
             border: 1px solid var(--border-color);
-            box-sizing: border-box;
         }
 
         #app-screen { display: none; }
@@ -44,11 +48,36 @@
         h1, h2, h3 { margin-top: 0; color: var(--text-main); }
         p { color: var(--text-secondary); }
 
+        /* Volume Warning Box */
+        .volume-warning {
+            background-color: #FFEBEE;
+            border-left: 4px solid var(--danger-red);
+            padding: 14px 18px;
+            border-radius: 0 4px 4px 0;
+            margin-bottom: 20px;
+        }
+
+        .volume-warning h3 {
+            color: var(--danger-red);
+            font-size: 15px;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .volume-warning p {
+            color: #B71C1C;
+            font-size: 13.5px;
+            margin: 0;
+            line-height: 1.4;
+        }
+
         .tutorial-content {
             background-color: #EBF3FF;
             padding: 20px;
             border-left: 4px solid var(--coursera-blue);
-            margin-bottom: 30px;
+            margin-bottom: 25px;
         }
 
         .matrix-grid {
@@ -64,6 +93,7 @@
             border-radius: 4px;
             background-color: #FAFAFA;
             transition: opacity 0.3s;
+            min-width: 0;
         }
 
         .routing-block.disabled, .performance-block.disabled {
@@ -124,6 +154,7 @@
             margin: 20px 0;
             width: 100%;
             height: 150px;
+            display: block;
         }
 
         .mission-box {
@@ -143,14 +174,21 @@
     <!-- Tutorial Screen -->
     <div id="tutorial-screen" class="screen" role="dialog" aria-labelledby="tutorial-title">
         <h1 id="tutorial-title">Modulation Matrix Simulator</h1>
+
+        <!-- Universal Volume Warning -->
+        <div class="volume-warning" role="alert">
+            <h3>⚠️ Volume Warning / Cuidado con el Volumen</h3>
+            <p>Modulation routings can create rapid amplitude shifts and resonant filter peaks. Please set your headphones or speakers to a comfortable, moderate level before starting.</p>
+        </div>
+
         <div class="tutorial-content">
             <p><strong>Objective:</strong> Make a static sound move by routing modulation sources (LFO, Velocity, Mod Wheel) to targets (Pitch, Loudness, Filter Cutoff).</p>
-            <p><strong>Instructions:</strong></p>
+            <p><strong>Instructions & Real-time Controls:</strong></p>
             <ol>
-                <li>Click <strong>Start Simulator</strong>.</li>
-                <li>Understand the difference between <em>Audio Flow</em> (the sound) and <em>Control Flow</em> (what moves the settings).</li>
+                <li>Click <strong>Start Simulator</strong> to initialize the engine.</li>
+                <li>Press and hold <kbd>Spacebar</kbd> or the on-screen button to trigger the sound.</li>
+                <li><strong>Live Gestures (Option A):</strong> You can adjust sliders (such as the Mod Wheel or Velocity) <em>while holding the note</em> to hear real-time parameter changes.</li>
                 <li>Complete the <strong>5 sequential missions</strong> to recreate classic musical effects: Vibrato, Tremolo, Wah, and Dynamic Velocity.</li>
-                <li>Use the virtual keyboard button to trigger the sound.</li>
             </ol>
         </div>
         <button id="btn-start" tabindex="0">Start Simulator</button>
@@ -159,22 +197,22 @@
     <!-- Main Screen -->
     <div id="app-screen" class="screen" role="main" aria-hidden="true">
         <h2>Control Flow: Making a Sound Move</h2>
-        <p>Connect a source (what moves) to a target (what gets changed).</p>
+        <p>Connect a source (what moves) to a target (what gets changed). Live adjustments are active while holding the note.</p>
         
         <canvas id="visualizer" width="800" height="150" aria-label="Audio Visualizer" role="img"></canvas>
         
-        <button id="btn-play" aria-pressed="false" tabindex="0">HOLD VIRTUAL KEY</button>
+        <button id="btn-play" aria-pressed="false" tabindex="0">HOLD VIRTUAL KEY (Spacebar)</button>
 
         <div class="matrix-grid">
             <!-- Performance Controls (Hands) -->
             <div id="mod-performance" class="performance-block">
                 <div class="block-title">Performance Controls</div>
                 <label for="midi-velocity">Velocity (How hard): <span id="val-vel">100</span></label>
-                <input type="range" id="midi-velocity" min="1" max="127" value="100">
+                <input type="range" id="midi-velocity" min="1" max="127" value="100" tabindex="0">
                 
                 <label for="mod-wheel">Mod Wheel (CC 1): <span id="val-mod">0</span></label>
-                <input type="range" id="mod-wheel" min="0" max="127" value="0">
-                <small style="color:var(--text-secondary);">Simulates player's physical gestures.</small>
+                <input type="range" id="mod-wheel" min="0" max="127" value="0" tabindex="0">
+                <small style="color:var(--text-secondary);">Simulates player's physical gestures in real-time.</small>
             </div>
 
             <!-- Routing Matrix -->
@@ -182,7 +220,7 @@
                 <div class="block-title">Source 1: LFO</div>
                 <small style="color:var(--text-secondary); display:block; margin-bottom:10px;">A slow, steady repeating wave (5 Hz).</small>
                 <label for="route-lfo">Target:</label>
-                <select id="route-lfo">
+                <select id="route-lfo" tabindex="0">
                     <option value="none" selected>None (Static)</option>
                     <option value="pitch">Pitch (Vibrato)</option>
                     <option value="loudness">Loudness (Tremolo)</option>
@@ -192,13 +230,13 @@
             <div id="mod-matrix-2" class="routing-block disabled">
                 <div class="block-title">Sources 2 & 3: MIDI</div>
                 <label for="route-modwheel">Mod Wheel Target:</label>
-                <select id="route-modwheel">
+                <select id="route-modwheel" tabindex="0">
                     <option value="none" selected>None</option>
                     <option value="filter">Filter Cutoff (Wah)</option>
                 </select>
                 
                 <label for="route-velocity">Velocity Target:</label>
-                <select id="route-velocity">
+                <select id="route-velocity" tabindex="0">
                     <option value="none" selected>None</option>
                     <option value="dynamics">Loudness & Brightness</option>
                 </select>
@@ -234,8 +272,8 @@
         const mTitle = document.getElementById('mission-title');
         const mStatus = document.getElementById('mission-status');
 
-        let audioCtx, mainOsc, lfoOsc, filter, masterGain;
-        let lfoPitchGain, lfoAmpGain, velocityGain, modWheelGain;
+        let audioCtx, mainOsc, lfoOsc, filter, tremoloGain, masterGain, safetyLimiter;
+        let lfoPitchGain, lfoAmpGain, velocityGain;
         let analyser, dataArray, bufferLength;
         let isPressed = false;
         let currentMission = 1;
@@ -243,21 +281,32 @@
 
         btnStart.addEventListener('click', () => {
             tutorialScreen.style.display = 'none';
+            tutorialScreen.setAttribute('aria-hidden', 'true');
             appScreen.style.display = 'block';
+            appScreen.removeAttribute('aria-hidden');
             initAudio();
+            btnPlay.focus();
         });
 
         function initAudio() {
             if (!audioCtx) {
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+                // Safety Limiter
+                safetyLimiter = audioCtx.createDynamicsCompressor();
+                safetyLimiter.threshold.value = -6;
+                safetyLimiter.knee.value = 0;
+                safetyLimiter.ratio.value = 20;
+                safetyLimiter.attack.value = 0.001;
+                safetyLimiter.release.value = 0.1;
                 
                 // Continuous LFO (5 Hz for classic vibrato/tremolo)
                 lfoOsc = audioCtx.createOscillator();
                 lfoOsc.type = 'sine';
                 lfoOsc.frequency.value = 5;
                 
-                lfoPitchGain = audioCtx.createGain(); // Controls Pitch wobble depth
-                lfoAmpGain = audioCtx.createGain();   // Controls Loudness pulse depth
+                lfoPitchGain = audioCtx.createGain();
+                lfoAmpGain = audioCtx.createGain();
                 
                 lfoPitchGain.gain.value = 0;
                 lfoAmpGain.gain.value = 0;
@@ -271,6 +320,8 @@
                 analyser.fftSize = 2048;
                 bufferLength = analyser.frequencyBinCount;
                 dataArray = new Uint8Array(bufferLength);
+                
+                safetyLimiter.connect(analyser);
                 analyser.connect(audioCtx.destination);
                 
                 drawOscilloscope();
@@ -279,12 +330,14 @@
 
         function triggerNote() {
             if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+            if (isPressed) return;
             isPressed = true;
+            btnPlay.setAttribute('aria-pressed', 'true');
             btnPlay.style.backgroundColor = '#0056D2';
 
             const now = audioCtx.currentTime;
             
-            // Audio Path: Osc -> Filter -> VelGain -> TremoloGain -> Master -> Analyser
+            // Audio Path: Osc -> Filter -> VelGain -> TremoloGain -> Master -> Limiter -> Analyser
             mainOsc = audioCtx.createOscillator();
             mainOsc.type = 'sawtooth';
             mainOsc.frequency.value = 110; // A2
@@ -296,82 +349,88 @@
             filter.type = 'lowpass';
             
             velocityGain = audioCtx.createGain();
-            let tremoloGain = audioCtx.createGain();
+            tremoloGain = audioCtx.createGain();
             masterGain = audioCtx.createGain();
             
-            // Connect LFO to Amplitude (Tremolo)
+            // Connect LFO to Tremolo Gain
             lfoAmpGain.connect(tremoloGain.gain);
             
             mainOsc.connect(filter);
             filter.connect(velocityGain);
             velocityGain.connect(tremoloGain);
             tremoloGain.connect(masterGain);
-            masterGain.connect(analyser);
+            masterGain.connect(safetyLimiter);
             
-            // Apply Routing Logic
+            // Apply Initial Routing Logic
             applyRouting(now);
 
-            // Simple ADSR Envelope for trigger
+            // Anti-pop attack ramp
+            masterGain.gain.cancelScheduledValues(now);
             masterGain.gain.setValueAtTime(0, now);
-            masterGain.gain.linearRampToValueAtTime(0.8, now + 0.05); // Attack
+            masterGain.gain.linearRampToValueAtTime(0.75, now + 0.05);
             
-            mainOsc.start();
+            mainOsc.start(now);
             checkMissions();
         }
 
         function releaseNote() {
             if (!audioCtx || !isPressed) return;
             isPressed = false;
+            btnPlay.setAttribute('aria-pressed', 'false');
             btnPlay.style.backgroundColor = '#000';
 
             const now = audioCtx.currentTime;
             masterGain.gain.cancelScheduledValues(now);
             masterGain.gain.setValueAtTime(masterGain.gain.value, now);
-            masterGain.gain.linearRampToValueAtTime(0, now + 0.1); // Release
+            masterGain.gain.linearRampToValueAtTime(0, now + 0.08);
             
             setTimeout(() => {
-                if(mainOsc) {
-                    mainOsc.stop();
-                    mainOsc.disconnect();
+                if (!isPressed && mainOsc) {
+                    try {
+                        mainOsc.stop();
+                        mainOsc.disconnect();
+                        lfoPitchGain.disconnect(mainOsc.frequency);
+                    } catch(e) {}
+                    mainOsc = null;
                 }
-            }, 150);
+            }, 90);
         }
 
+        // Option A: Live Dynamic Parameter Application
         function applyRouting(time = audioCtx.currentTime) {
-            if(!isPressed) return;
+            if (!isPressed || !audioCtx) return;
             
             const vel = parseInt(inpVel.value);
             const mod = parseInt(inpMod.value);
 
             // 1. LFO Routing
             if (routeLfo.value === 'pitch') {
-                lfoPitchGain.gain.setTargetAtTime(10, time, 0.01); // 10 Hz wobble
-                lfoAmpGain.gain.setTargetAtTime(0, time, 0.01);
+                lfoPitchGain.gain.setTargetAtTime(10, time, 0.02); // 10 Hz pitch wobble
+                lfoAmpGain.gain.setTargetAtTime(0, time, 0.02);
             } else if (routeLfo.value === 'loudness') {
-                lfoPitchGain.gain.setTargetAtTime(0, time, 0.01);
-                lfoAmpGain.gain.setTargetAtTime(0.8, time, 0.01); // Severe pulse
+                lfoPitchGain.gain.setTargetAtTime(0, time, 0.02);
+                lfoAmpGain.gain.setTargetAtTime(0.65, time, 0.02); // Periodic amplitude dip
             } else {
-                lfoPitchGain.gain.setTargetAtTime(0, time, 0.01);
-                lfoAmpGain.gain.setTargetAtTime(0, time, 0.01);
+                lfoPitchGain.gain.setTargetAtTime(0, time, 0.02);
+                lfoAmpGain.gain.setTargetAtTime(0, time, 0.02);
             }
 
             // 2. Velocity Routing (Dynamics)
             if (routeVel.value === 'dynamics') {
-                // Velocity 1-127 maps to Gain (0.1 to 1.0) and Filter Cutoff (200Hz to 8000Hz)
                 const velFactor = vel / 127;
-                velocityGain.gain.setTargetAtTime(velFactor, time, 0.01);
-                filter.frequency.setTargetAtTime(200 + (7800 * velFactor), time, 0.01);
+                velocityGain.gain.setTargetAtTime(Math.max(0.15, velFactor), time, 0.02);
+                const targetCutoff = 250 + (7750 * Math.pow(velFactor, 1.5));
+                filter.frequency.setTargetAtTime(targetCutoff, time, 0.02);
             } else {
-                velocityGain.gain.setTargetAtTime(1, time, 0.01);
-                filter.frequency.setTargetAtTime(3000, time, 0.01); // Default static bright
+                velocityGain.gain.setTargetAtTime(1.0, time, 0.02);
+                filter.frequency.setTargetAtTime(3200, time, 0.02);
             }
 
-            // 3. Mod Wheel Routing (Wah)
+            // 3. Mod Wheel Routing (Live Wah Sweep)
             if (routeMod.value === 'filter') {
-                // Mod wheel opens filter further (up to 8000 Hz)
                 const modFactor = mod / 127;
-                const baseFreq = routeVel.value === 'dynamics' ? filter.frequency.value : 500; 
-                filter.frequency.setTargetAtTime(baseFreq + (7500 * modFactor), time, 0.05);
+                const baseFreq = (routeVel.value === 'dynamics') ? 300 : 450;
+                filter.frequency.setTargetAtTime(baseFreq + (7500 * modFactor), time, 0.03);
             }
         }
 
@@ -386,12 +445,12 @@
             ctx.strokeStyle = '#82B1FF';
             ctx.beginPath();
 
-            const sliceWidth = canvas.width * 1.0 / bufferLength;
+            const sliceWidth = (canvas.width * 1.0) / bufferLength;
             let x = 0;
 
             for (let i = 0; i < bufferLength; i++) {
                 const v = dataArray[i] / 128.0;
-                const y = v * canvas.height / 2;
+                const y = (v * canvas.height) / 2;
 
                 if (i === 0) ctx.moveTo(x, y);
                 else ctx.lineTo(x, y);
@@ -405,7 +464,9 @@
         function updateUI() {
             valVel.textContent = inpVel.value;
             valMod.textContent = inpMod.value;
-            if(isPressed) applyRouting();
+            if (isPressed) {
+                applyRouting();
+            }
             checkMissions();
         }
 
@@ -414,7 +475,7 @@
                 currentMission = 2;
                 blockLfo.classList.remove('disabled');
                 mTitle.textContent = "Mission 2/5: The Singer's Wobble (Vibrato)";
-                mStatus.innerHTML = "Route the <strong>LFO Target</strong> to <strong>Pitch</strong>. Press the key to hear a singer's vibrato.";
+                mStatus.innerHTML = "Route the <strong>LFO Target</strong> to <strong>Pitch</strong>. Press and hold the key to hear a singer's vibrato.";
             } 
             else if (currentMission === 2 && routeLfo.value === 'pitch' && isPressed) {
                 currentMission = 3;
@@ -425,45 +486,66 @@
                 currentMission = 4;
                 blockMidi.classList.remove('disabled');
                 mTitle.textContent = "Mission 4/5: The Wah Pedal";
-                mStatus.innerHTML = "Set the LFO back to 'None'. Route <strong>Mod Wheel Target</strong> to <strong>Filter Cutoff</strong>. While holding the key, slide the Mod Wheel.";
+                mStatus.innerHTML = "Set the LFO back to 'None'. Route <strong>Mod Wheel Target</strong> to <strong>Filter Cutoff</strong>. While holding the key, slide the Mod Wheel in real-time!";
             }
             else if (currentMission === 4 && routeMod.value === 'filter' && parseInt(inpMod.value) > 50 && isPressed) {
                 currentMission = 5;
                 mTitle.textContent = "Mission 5/5: Human Touch (Velocity)";
-                mStatus.innerHTML = "Route <strong>Velocity Target</strong> to <strong>Loudness & Brightness</strong>. Trigger a note with Velocity at 20, then at 127. Notice how it bites harder!";
+                mStatus.innerHTML = "Route <strong>Velocity Target</strong> to <strong>Loudness & Brightness</strong>. Trigger a note with Velocity at 20, then raise it past 100 while holding to hear it bite harder!";
             }
             else if (currentMission === 5 && routeVel.value === 'dynamics' && parseInt(inpVel.value) > 100 && isPressed) {
                 currentMission = 6;
                 mTitle.textContent = "Mission 5/5: Completed!";
                 mTitle.classList.add('success-text');
-                mStatus.innerHTML = "<strong>Congratulations!</strong> You mapped Control Flow to Audio Flow. <br><br><em>Note: Do not close this window without analyzing how velocity articulation is required for your Week 2 Assignment (Piece 2).</em>";
+                mStatus.innerHTML = "<strong>Congratulations!</strong> You mapped Control Flow to Audio Flow with live modulation gestures. <br><br><em>Note: Do not close this window without analyzing how velocity articulation is required for your Week 2 Assignment (Piece 2).</em>";
             }
         }
 
-        // Listeners for triggers
+        // Global Keyboard Handler (WCAG: Space/Enter holds note, prevents scrolling)
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' || e.key === ' ') {
+                e.preventDefault();
+                if (appScreen.style.display === 'block' && !e.repeat && !isPressed) {
+                    triggerNote();
+                }
+            } else if (e.key === 'Enter') {
+                if (appScreen.style.display === 'block' && e.target !== btnStart && !e.repeat) {
+                    if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'SELECT') {
+                        e.preventDefault();
+                        if (!isPressed) triggerNote();
+                    }
+                }
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'Space' || e.key === ' ' || e.key === 'Enter') {
+                e.preventDefault();
+                if (isPressed) releaseNote();
+            }
+        });
+
+        // Trigger Listeners (Mouse / Touch)
         btnPlay.addEventListener('mousedown', triggerNote);
         btnPlay.addEventListener('mouseup', releaseNote);
         btnPlay.addEventListener('mouseleave', releaseNote);
         btnPlay.addEventListener('touchstart', (e) => { e.preventDefault(); triggerNote(); });
         btnPlay.addEventListener('touchend', (e) => { e.preventDefault(); releaseNote(); });
-        
-        btnPlay.addEventListener('keydown', (e) => { if ((e.key === 'Enter' || e.key === ' ') && !isPressed) triggerNote(); });
-        btnPlay.addEventListener('keyup', (e) => { if ((e.key === 'Enter' || e.key === ' ') && isPressed) releaseNote(); });
 
-        // Listeners for controls
+        // Control Matrix Listeners
         routeLfo.addEventListener('change', updateUI);
         routeMod.addEventListener('change', updateUI);
         routeVel.addEventListener('change', updateUI);
         inpVel.addEventListener('input', updateUI);
         inpMod.addEventListener('input', updateUI);
 
-        // Initial static draw
+        // Initial static visualizer
         ctx.fillStyle = '#1F1F1F';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.beginPath();
         ctx.strokeStyle = '#636363';
-        ctx.moveTo(0, canvas.height/2);
-        ctx.lineTo(canvas.width, canvas.height/2);
+        ctx.moveTo(0, canvas.height / 2);
+        ctx.lineTo(canvas.width, canvas.height / 2);
         ctx.stroke();
     </script>
 </body>
